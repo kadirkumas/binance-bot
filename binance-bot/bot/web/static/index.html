@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qwen Binance Bot — Otomatik Al-Sat Paneli</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login" class="login-wrap">
+  <form class="login-card" id="loginForm">
+    <div class="login-logo">⚡</div>
+    <h1>Qwen Binance Bot</h1>
+    <p class="muted">Otomatik al-sat paneli · Paper / Testnet / Canlı</p>
+    <label>Panel parolası</label>
+    <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••" required>
+    <button class="btn primary block" type="submit">Giriş yap</button>
+    <div id="loginError" class="login-error"></div>
+    <p class="tiny muted">İlk kurulumda varsayılan parola: <code>admin1234</code> — girişten sonra <b>Güvenlik</b> sekmesinden değiştirin.</p>
+  </form>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="brand"><span class="bolt">⚡</span> Qwen Binance Bot</div>
+    <div class="badges">
+      <span id="badgeMode" class="badge">—</span>
+      <span id="badgeMarket" class="badge">—</span>
+      <span id="badgeStatus" class="badge status"><i class="dot"></i><span>—</span></span>
+    </div>
+    <div class="top-metrics">
+      <div class="tm"><label>Özkaynak</label><b id="tmEquity">—</b></div>
+      <div class="tm"><label>Toplam PnL</label><b id="tmPnl">—</b></div>
+      <div class="tm"><label>Günlük</label><b id="tmDaily">—</b></div>
+    </div>
+    <div class="top-actions">
+      <button id="btnStart" class="btn success">▶ Başlat</button>
+      <button id="btnStop" class="btn" hidden>⏸ Durdur</button>
+      <button id="btnKill" class="btn danger">🛑 KILL</button>
+      <button id="btnLogout" class="btn ghost" title="Çıkış">⎋</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="dash">📊 Panel</button>
+    <button class="tab-btn" data-tab="strategies">🧠 Stratejiler</button>
+    <button class="tab-btn" data-tab="backtest">🧪 Backtest</button>
+    <button class="tab-btn" data-tab="trades">📜 İşlemler</button>
+    <button class="tab-btn" data-tab="settings">⚙️ Ayarlar</button>
+    <button class="tab-btn" data-tab="security">🔐 Güvenlik</button>
+  </nav>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <main>
+    <!-- ---------- PANEL ---------- -->
+    <section class="tab active" id="tab-dash">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid">
+        <div class="card col8">
+          <div class="card-head">
+            <h3>Fiyat Grafiği</h3>
+            <div class="row">
+              <select id="chartSymbol"></select>
+              <select id="chartInterval"></select>
+              <label class="chk"><input type="checkbox" id="chartMarkers" checked> İşlemler</label>
+              <button class="btn tiny" id="btnRefreshChart">↻</button>
+            </div>
+          </div>
+          <canvas id="priceChart" class="chart"></canvas>
+          <div class="legend" id="chartLegend"></div>
+        </div>
+        <div class="card col4">
+          <div class="card-head"><h3>Hızlı İşlem</h3><span class="muted tiny" id="manualMode"></span></div>
+          <div class="form">
+            <label>Sembol</label><input id="mSymbol" value="BTCUSDT">
+            <label>Tutar (USDT)</label><input id="mUsdt" type="number" value="100" min="1" step="10">
+            <div class="btn-row">
+              <button class="btn success" id="btnBuy">AL / LONG</button>
+              <button class="btn danger" id="btnShort">SHORT</button>
+            </div>
+            <div class="btn-row">
+              <button class="btn" id="btnSell">SAT / KAPAT</button>
+              <button class="btn warn" id="btnFlatten">TÜMÜNÜ KAPAT</button>
+            </div>
+            <p class="tiny muted" id="manualHint"></p>
+          </div>
+        </div>
+
+        <div class="card col7">
+          <div class="card-head"><h3>Açık Pozisyonlar</h3><span class="tiny muted" id="posCount"></span></div>
+          <div class="table-wrap"><table id="posTable"></table></div>
+        </div>
+        <div class="card col5">
+          <div class="card-head"><h3>Özkaynak Eğrisi</h3><span class="tiny muted" id="equityInfo"></span></div>
+          <canvas id="equityChart" class="chart small"></canvas>
+        </div>
+
+        <div class="card col12">
+          <div class="card-head"><h3>İzleme Listesi</h3><span class="tiny muted">Sembol · strateji · indikatörler · son sinyal</span></div>
+          <div class="table-wrap"><table id="watchTable"></table></div>
+        </div>
+
+        <div class="card col12">
+          <div class="card-head">
+            <h3>Canlı Log</h3>
+            <div class="row">
+              <select id="logLevel">
+                <option value="">Tümü</option><option value="trade">İşlem</option>
+                <option value="info">Bilgi</option><option value="warn">Uyarı</option><option value="error">Hata</option>
+              </select>
+              <label class="chk"><input type="checkbox" id="logAuto" checked> Oto-kaydır</label>
+            </div>
+          </div>
+          <div id="logBox" class="logbox"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- STRATEJİLER ---------- -->
+    <section class="tab" id="tab-strategies">
+      <div class="grid">
+        <div class="card col8">
+          <div class="card-head"><h3>Sembol & Strateji Atamaları</h3>
+            <button class="btn primary tiny" id="btnSaveSymbols">💾 Kaydet</button></div>
+          <div id="symbolCards"></div>
+        </div>
+        <div class="card col4">
+          <div class="card-head"><h3>Sembol Ekle</h3></div>
+          <div class="form">
+            <label>Ara (Binance)</label>
+            <div class="row"><input id="symSearch" placeholder="örn. BTC, SOL, ARB"><button class="btn tiny" id="btnSymSearch">Ara</button></div>
+            <select id="symSearchResults" size="8" class="listbox"></select>
+            <label>Zaman dilimi</label><select id="newInterval"></select>
+            <label>Piyasa</label><select id="newMarket"><option value="spot">Spot</option><option value="futures">Futures</option></select>
+            <label>Strateji</label><select id="newStrategy"></select>
+            <button class="btn primary block" id="btnAddSymbol">+ Listeye ekle</button>
+          </div>
+          <div class="divider"></div>
+          <h4>Strateji Kataloğu</h4>
+          <div id="strategyDocs"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- BACKTEST ---------- -->
+    <section class="tab" id="tab-backtest">
+      <div class="grid">
+        <div class="card col4">
+          <div class="card-head"><h3>Test Ayarları</h3></div>
+          <div class="form" id="btForm"></div>
+          <button class="btn primary block" id="btnRunBacktest">🧪 Backtest Çalıştır</button>
+          <div id="btStatus" class="tiny muted" style="margin-top:8px"></div>
+          <div class="divider"></div>
+          <h4>Kayıtlı Testler</h4>
+          <div id="btHistory" class="bt-history"></div>
+        </div>
+        <div class="card col8">
+          <div class="card-head"><h3>Sonuç</h3><span class="tiny muted" id="btTitle"></span></div>
+          <div id="btMetrics" class="metrics"></div>
+          <canvas id="btChart" class="chart"></canvas>
+          <div class="table-wrap" style="max-height:320px"><table id="btTrades"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- İŞLEMLER ---------- -->
+    <section class="tab" id="tab-trades">
+      <div class="grid">
+        <div class="card col12">
+          <div class="card-head">
+            <h3>İşlem Geçmişi</h3>
+            <div class="row">
+              <select id="tradesMode"><option value="">Tüm modlar</option><option value="paper">Paper</option><option value="testnet">Testnet</option><option value="live">Canlı</option></select>
+              <button class="btn tiny" id="btnRefreshTrades">↻ Yenile</button>
+              <a class="btn tiny" href="/api/export/trades.csv" id="btnCsv">⬇ CSV</a>
+            </div>
+          </div>
+          <div class="kpis" id="tradeKpis"></div>
+          <div class="table-wrap" style="max-height:60vh"><table id="tradesTable"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- AYARLAR ---------- -->
+    <section class="tab" id="tab-settings">
+      <div class="grid">
+        <div class="card col6">
+          <div class="card-head"><h3>Çalışma Modu</h3></div>
+          <div class="form" id="modeForm"></div>
+          <div class="divider"></div>
+          <h3>Motor</h3>
+          <div class="form" id="engineForm"></div>
+        </div>
+        <div class="card col6">
+          <div class="card-head"><h3>Risk Yönetimi</h3></div>
+          <div class="form" id="riskForm"></div>
+        </div>
+        <div class="card col6">
+          <div class="card-head"><h3>Paper & Futures</h3></div>
+          <div class="form" id="paperForm"></div>
+          <div class="divider"></div>
+          <div class="form" id="futuresForm"></div>
+          <div class="btn-row">
+            <button class="btn warn" id="btnResetPaper">♻ Paper hesabı sıfırla</button>
+          </div>
+        </div>
+        <div class="card col6">
+          <div class="card-head"><h3>Bildirimler</h3></div>
+          <div class="form" id="notifyForm"></div>
+          <button class="btn tiny" id="btnTestNotify">Test bildirimi gönder</button>
+          <div class="divider"></div>
+          <h4>Uyarılar</h4>
+          <div id="cfgWarnings" class="warnings"></div>
+        </div>
+        <div class="col12 sticky-save">
+          <button class="btn primary" id="btnSaveSettings">💾 Tüm Ayarları Kaydet</button>
+          <span class="tiny muted" id="settingsSaved"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- GÜVENLİK ---------- -->
+    <section class="tab" id="tab-security">
+      <div class="grid">
+        <div class="card col7">
+          <div class="card-head"><h3>Binance API Anahtarları</h3></div>
+          <p class="tiny muted">Anahtarlar diskte şifreli saklanır (<code>data/secrets.json</code>, HMAC-SHA256 akış şifresi + PBKDF2).
+            Ortam değişkeni tanımlıysa o önceliklidir. <b>Canlı modda yalnızca "Spot & Margin Trading" / "Futures" izni verin, PARA ÇEKME iznini asla açmayın.</b></p>
+          <div id="keysList"></div>
+        </div>
+        <div class="card col5">
+          <div class="card-head"><h3>Panel Parolası</h3></div>
+          <div class="form">
+            <label>Mevcut parola</label><input type="password" id="pwCurrent">
+            <label>Yeni parola (min 6)</label><input type="password" id="pwNew">
+            <label>Yeni parola (tekrar)</label><input type="password" id="pwNew2">
+            <button class="btn primary block" id="btnChangePw">Parolayı değiştir</button>
+          </div>
+          <div class="divider"></div>
+          <h4>Güvenlik Notları</h4>
+          <ul class="notes tiny">
+            <li>Paneli internete açmayın; VPN/SSH tüneli veya localhost kullanın.</li>
+            <li>Canlı mod iki aşamalı onay ister ve <code>max_order_usdt</code> ile sınırlıdır.</li>
+            <li>KILL butonu tüm pozisyonları kapatır ve yeni emirleri kalıcı olarak kilitler.</li>
+            <li>Stop-loss/take-profit bot tarafında izlenir; bot kapanırsa çalışmaz.</li>
+            <li>Önce paper, sonra testnet, en son küçük tutarla canlı.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="footer tiny muted">
+    Qwen Binance Bot · eğitim/yazılım amaçlıdır · yatırım tavsiyesi değildir · kripto işlemleri sermaye kaybı riski taşır
+  </footer>
+</div>
+
+<div id="toasts" class="toasts"></div>
+<div id="modal" class="modal-backdrop" hidden>
+  <div class="modal">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+    <div class="btn-row" id="modalActions"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
